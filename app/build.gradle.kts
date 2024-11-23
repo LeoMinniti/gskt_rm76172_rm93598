@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    kotlin("kapt")
 }
 
 android {
@@ -63,4 +64,19 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.3.1")
+
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.appcompat:appcompat:1.4.1")
+    implementation("androidx.activity:activity-ktx:1.7.0")
+
+    implementation(libs.androidx.material3)
+    implementation("com.google.android.material:material:1.9.0")
+
+
+    implementation("androidx.room:room-runtime:2.4.1")
+    kapt("androidx.room:room-compiler:2.4.1")
+    implementation("androidx.room:room-ktx:2.4.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
 }

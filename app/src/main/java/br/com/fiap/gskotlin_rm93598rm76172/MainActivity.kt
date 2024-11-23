@@ -1,182 +1,129 @@
 package br.com.fiap.gskotlin_rm93598rm76172
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import br.com.fiap.gskotlin_rm93598rm76172.model.EcoDicas
-import br.com.fiap.gskotlin_rm93598rm76172.repository.getAllEcoDicas
-import br.com.fiap.gskotlin_rm93598rm76172.repository.getEcoDicasListsByDescription
-import br.com.fiap.gskotlin_rm93598rm76172.ui.theme.Gskotlin_rm93598rm76172Theme
+import android.widget.Toast
+import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.RecyclerView
+import br.com.fiap.gskotlin_rm93598rm76172.viewmodel.ItemsAdapter
+import br.com.fiap.gskotlin_rm93598rm76172.viewmodel.ItemsViewModel
+import br.com.fiap.gskotlin_rm93598rm76172.viewmodel.ItemsViewModelFactory
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.textfield.TextInputEditText
 
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.appcompat.app.AppCompatActivity() {
+    private lateinit var viewModel: ItemsViewModel
+    private lateinit var searchView: SearchView
+    private lateinit var adapter: ItemsAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            Gskotlin_rm93598rm76172Theme {
-                // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    EcoDicasScreen()
+        setContentView(R.layout.activity_main)
+
+        // Configurar Toolbar
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        // Setar o título como EcoDicas
+        supportActionBar?.title = "EcoDicas"
+
+        // Configuração do RecyclerView, ViewModel, etc.
+        setupRecyclerView()
+        setupSearchView()
+        setupViewModel()
+        addInitialTips()
+        setupFab()
+
+    }
+
+    private fun setupFab() {
+        val fab: FloatingActionButton = findViewById(R.id.fabAddTip)
+        fab.setOnClickListener {
+            showAddTipDialog()
+        }
+    }
+
+    private fun showAddTipDialog() {
+        // Infla o layout personalizado do diálogo
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_tip, null)
+
+        val titleEditText =
+            dialogView.findViewById<TextInputEditText>(R.id.editTextTitle)
+        val descriptionEditText =
+            dialogView.findViewById<TextInputEditText>(R.id.editTextDescription)
+
+        // Configura o diálogo de alerta
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Adicionar EcoDica")
+            .setView(dialogView)
+            .setPositiveButton("Adicionar") { _, _ ->
+                val title = titleEditText.text.toString()
+                val description = descriptionEditText.text.toString()
+
+                if (title.isBlank() || description.isBlank()) {
+                    Toast.makeText(this, "Título e descrição são de preenchimento obrigatório", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
                 }
+
+                // Adiciona a dica usando o ViewModel
+                viewModel.addTip(title, description)
+                Toast.makeText(this, "EcoDica adicionada com sucesso!", Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EcoDicasScreen() {
-
-    var searchTextState by remember {
-        mutableStateOf("")
-    }
-    var ecoDicasListState by remember {
-        mutableStateOf(getAllEcoDicas())
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = "Minhas EcoDicas favoritas",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = searchTextState,
-            onValueChange = {
-                searchTextState = it
+    private fun setupRecyclerView() {
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+        adapter = ItemsAdapter(
+            onItemClicked = { item ->
+                showToast(item.description)
             },
-            modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text(text = "Título da Ecodica")
-            },
-            trailingIcon = {
-                IconButton(onClick = { ecoDicasListState = getEcoDicasListsByDescription(searchTextState) }) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = ""
-                    )
-                }
+            onItemRemoved = { item ->
+                viewModel.removeItem(item)
             }
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        recyclerView.adapter = adapter
+    }
 
-        LazyRow(){
-            items(ecoDicasListState){
-                DescriptionCard(ecoDicas = it)
+    private fun setupSearchView() {
+        searchView = findViewById(R.id.searchView)
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
             }
-        }
 
-        LazyColumn(){
-            items(ecoDicasListState){
-                EcoDicasCard(ecoDicas = it)
+            override fun onQueryTextChange(newText: String?): Boolean {
+                adapter.filter(newText ?: "")
+                return true
             }
+        })
+    }
+
+    private fun setupViewModel() {
+        val viewModelFactory = ItemsViewModelFactory(application)
+        viewModel = ViewModelProvider(this, viewModelFactory).get(ItemsViewModel::class.java)
+
+        viewModel.itemsLiveData.observe(this) { items ->
+            adapter.updateItems(items)
         }
     }
-}
 
-@Composable
-fun DescriptionCard(ecoDicas: EcoDicas) {
-    Card(modifier = Modifier
-        .size(100.dp)
-        .padding(end = 4.dp)) {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Text(text = ecoDicas.description)
-        }
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun addInitialTips() {
+        // Adiciona dicas iniciais
+        viewModel.addTip(
+            "Estude sobre energia limpa",
+            "É um sistema de produção de energia que não emite poluentes na atmosfera e tem um impacto mínimo no meio ambiente",
+        )
+        viewModel.addTip(
+            "Defina horários fixos para lavar roupas",
+            "O famoso bandeira branca estabele horários cuja energia tem um custo menor quando utilizada dento de um horário pré-determinado pela operadora de energia(como a ENEL)"
+        )
     }
 }
-
-
-@Composable
-fun EcoDicasCard(ecoDicas: EcoDicas) {
-    Card(modifier = Modifier.padding(bottom = 8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .weight(3f)
-            ) {
-                Text(
-                    text = ecoDicas.title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Blue
-                )
-                Text(
-                    text = ecoDicas.description,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal
-                )
-            }
-        }
-    }
-}
-
-/*
-@Preview(showBackground = true, name = "Eco Dicas Screen Preview")
-@Composable
-fun PreviewEcoDicasScreen() {
-    ListasLazyTheme {
-        EcoDicasScreen()
-    }
-}
-
-@Preview(showBackground = true, name = "Description Card Preview")
-@Composable
-fun PreviewStudioCard() {
-    ListasLazyTheme {
-        DescriptionCard(ecoDicas = EcoDicas(1, "Titulo Sustentável 01", "Exemplo de descrição sustentável"))
-    }
-}
-
-@Preview(showBackground = true, name = "Game Card Preview")
-@Composable
-fun PreviewGameCard() {
-    ListasLazyTheme {
-        GameCard(game = Game(1, "Example Game", "Example Studio", 2023))
-    }
-}
-*/
