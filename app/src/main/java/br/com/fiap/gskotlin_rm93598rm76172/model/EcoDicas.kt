@@ -8,6 +8,5 @@ data class EcoDicas(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,
-    val description: String,
-    val url: String? = null
+    val description: String
 )

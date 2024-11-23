@@ -28,9 +28,9 @@ class ItemsViewModel(application: Application) : AndroidViewModel(application) {
         itemsLiveData = itemDao.getAll()
     }
 
-    fun addTip(title: String, description: String, url: String? = null) {
+    fun addTip(title: String, description: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val newItem = EcoDicas(title = title, description = description, url = url)
+            val newItem = EcoDicas(title = title, description = description)
             itemDao.insert(newItem)
         }
     }
